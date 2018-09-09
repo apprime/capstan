@@ -1,4 +1,6 @@
-﻿namespace Capstan.Events
+﻿using System.Threading.Tasks;
+
+namespace Capstan.Events
 {
     /// <summary>
     /// An Event is a simple extension to ReadonlyEvent.
@@ -7,7 +9,7 @@
     /// </summary>
     public abstract class MutatingEvent : ReadingEvent
     {
-        public override ReadingEvent Process()
+        public async override Task<ReadingEvent> Process()
         {
             GatherData();
             Resolve();

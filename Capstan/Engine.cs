@@ -89,12 +89,10 @@ namespace Capstan
             }
         }
 
-        private void ProcessBatch(IEnumerable<ReadingEvent> batch)
+        private async Task ProcessBatch(IEnumerable<ReadingEvent> batch)
         {
-            foreach (var item in batch)
-            {
-                item.Process();
-            }
+            await Task.WhenAll(batch.Select(i => i.Process()));
+            return;
         }
 
         public void Push(ReadingEvent e)

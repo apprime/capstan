@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace Capstan.Events
 {
@@ -8,7 +9,7 @@ namespace Capstan.Events
         public static event EventHandler EventResolved;
         public delegate void EventHandler(IEventResult result);
 
-        public virtual ReadingEvent Process()
+        public async virtual Task<ReadingEvent> Process()
         {
             GatherData();
             Resolve();
