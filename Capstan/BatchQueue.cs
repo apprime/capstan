@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace Capstan
 {
@@ -10,7 +8,7 @@ namespace Capstan
         {
             for (var i = 0; i < chunkSize && this.Count > 0; i++)
             {
-                yield return this.Dequeue();
+                yield return Dequeue();
             }
         }
     }

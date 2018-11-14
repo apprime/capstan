@@ -2,31 +2,17 @@
 
 namespace Capstan.Events
 {
-    /// <summary>
-    /// An Event is a simple extension to ReadonlyEvent.
-    /// It adds a method inside the Process which arranges for 
-    /// mutated data to be set
-    /// </summary>
-    public abstract class MutatingEvent : ReadingEvent
+    public abstract class CapstanEvent
     {
-        public async override Task<ReadingEvent> Process()
+        internal CapstanEvent()
         {
-            GatherData();
-            Resolve();
-            Persist();
-            Broadcast();
-
-            return this;
+            //Prevent plebs from creating this outside of assembly.
         }
 
-        /// <summary>
-        /// Persist the change set in memory
-        /// (i.e. make the changes)
-        /// TODO: There is a major todo lurking here. 
-        /// We need some way of locking resources and 
-        /// rollbacking if they cant be committed.
-        /// </summary>
-        /// <returns></returns>
-        protected abstract MutatingEvent Persist();
+        //public static event EventHandler EventResolved;
+        //public delegate void EventHandler(IEventResult result);
+        public abstract Task<ICommandResult> GatherData();
+        //public abstract Task<ICommandResult> Process();
+        public abstract Task<ICommandResult> Resolve();
     }
 }

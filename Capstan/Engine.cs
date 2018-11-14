@@ -10,7 +10,7 @@ namespace Capstan
 {
     public class Engine
     {
-        private BatchQueue<ReadingEvent> _eventList;
+        private BatchQueue<Query> _eventList;
 
         //TODO: We want to be able to set these values in config I suppose?
         public bool run = false;
@@ -18,17 +18,9 @@ namespace Capstan
         private const int MaxQueueSize = 1;
         public AutoResetEvent _loopTimer;
 
-        //public static Engine Instance { get; }
-        //static Engine()
-        //{
-        //    Instance = new Engine();
-        //}
-
-
-
         private Engine()
         {
-            _eventList = new BatchQueue<ReadingEvent>();
+            _eventList = new BatchQueue<Query>();
             _loopTimer = new AutoResetEvent(false);
         }
 
@@ -44,13 +36,13 @@ namespace Capstan
         /// For each category there is another dictionary of names for the events and a func that will 
         /// initiate new new instance of the Event class.
         /// </summary>
-        private Dictionary<string, Dictionary<string, Func<string[], ReadingEvent>>> categories;
+        private Dictionary<string, Dictionary<string, Func<string[], Query>>> categories;
 
-        private void AddOrCreate(string category, string name, Func<string[], ReadingEvent> instanceGetter)
+        private void AddEventAttribute(string category, string name, Func<string[], Query> instanceGetter)
         {
             if (!categories.ContainsKey(category))
             {
-                categories.Add(category, new Dictionary<string, Func<string[], ReadingEvent>>());
+                categories.Add(category, new Dictionary<string, Func<string[], Query>>());
             }
 
             categories[category].Add(name, instanceGetter);
@@ -69,8 +61,8 @@ namespace Capstan
                 if (attr != null)
                 {
                     var paramType = new Type[] { typeof(object[]) };
-                    Func<string[], ReadingEvent> func = (parameters) => (ReadingEvent)type.GetConstructor(paramType).Invoke(parameters);
-                    AddOrCreate(attr.Category, attr.Name, func);
+                    Func<string[], Query> func = (parameters) => (Query)type.GetConstructor(paramType).Invoke(parameters);
+                    AddEventAttribute(attr.Category, attr.Name, func);
                 }
             }
         }
@@ -89,13 +81,13 @@ namespace Capstan
             }
         }
 
-        private async Task ProcessBatch(IEnumerable<ReadingEvent> batch)
+        private async Task ProcessBatch(IEnumerable<Query> batch)
         {
             await Task.WhenAll(batch.Select(i => i.Process()));
             return;
         }
 
-        public void Push(ReadingEvent e)
+        public void Push(Query e)
         {
             _eventList.Enqueue(e);
             //We could use an event to trigger if the queue grows too big, but since we know when we are adding to it, I don't think we need it.
