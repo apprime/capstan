@@ -1,4 +1,5 @@
-﻿using Capstan.Events;
+﻿using Capstan.Core;
+using Capstan.Events;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,7 +20,7 @@ namespace Capstan
             return await command.Process();
         }
 
-        public void RegisterSubscriber<T>(IRaiseEvent<T> subscriber)
+        public void RegisterSubscriber<T>(IRaiseEvent<T> @event, IReactionary<T> reactionary)
         {
 
         }
@@ -68,46 +69,26 @@ namespace Capstan
         Task Receive(IPayload<T> payload);
     }
 
-    public class EventReactionary
+
+
+    /// <summary>
+    /// An event reactionary is a class that reacts
+    /// to events raised by the system. They do not
+    /// need to do anything specific, all we really 
+    /// know is that they are triggered by events.
+    /// </summary>
+    public class CustomReact : IReactionary<LordZorkelbortIsBack>
     {
-
-    }
-
-
-    public class CustomReact : EventReactionary
-    {
-        public EventHandler<LordZorkelbortIsBack> Handler;
-        public void Subscribe<T>(IRaiseEvent<T> @event, EventHandler<T> handler)
+        public void Subscribe(IRaiseEvent<LordZorkelbortIsBack> @event)
         {
-            @event.OnEvent += new EventHandler<T>(HandleZorkelBort);
+            @event.OnEvent += Handler;
         }
-        public CustomReact(IRaiseEvent<LordZorkelbortIsBack> @event)
+        
+        public void Handler(object e, LordZorkelbortIsBack args)
         {
-            Subscribe(@event, Handler);
-            //new CustomReact(
+            // He is too strong
+            // There is nothing that can handle the lord!
         }
-
-        //public delegate EventHandler<LordZorkelbortIsBack> Subscriber;
-
-        private delegate EventHandler<T>(LordZorkelbortIsBack args) HandleZorkelBort;
-
-        {
-            var x = 5;
-            x = x < args.Important ? 6 : 4;
-            return new EventHandler<T>();
-        }
-    }
-
-    //public delegate void EventHandler<T>
-
-    public interface IListenTo<T>
-    {
-        T Handler { get; }
-    }
-
-    public interface IRaiseEvent<T>
-    {
-        event EventHandler<T> OnEvent;
     }
 
     public class CustomEventHappens : IRaiseEvent<LordZorkelbortIsBack>
