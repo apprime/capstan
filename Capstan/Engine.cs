@@ -10,17 +10,24 @@ namespace Capstan
 {
     public class Engine
     {
-        private BatchQueue<Query> _eventList;
+        //TODO: Setup Engine with a builder pattern.
+        /*
+            Register activists, builder.AddActivist(IActivist)?
+            builder.AddReactionary()?
+        */
+
+
+
+        private BatchQueue<CapstanEvent> _eventList;
 
         //TODO: We want to be able to set these values in config I suppose?
         public bool run = false;
-        private const int _threadNumber = 1;
         private const int MaxQueueSize = 1;
         public AutoResetEvent _loopTimer;
 
         private Engine()
         {
-            _eventList = new BatchQueue<Query>();
+            _eventList = new BatchQueue<CapstanEvent>();
             _loopTimer = new AutoResetEvent(false);
         }
 
@@ -36,13 +43,13 @@ namespace Capstan
         /// For each category there is another dictionary of names for the events and a func that will 
         /// initiate new new instance of the Event class.
         /// </summary>
-        private Dictionary<string, Dictionary<string, Func<string[], Query>>> categories;
+        private Dictionary<string, Dictionary<string, Func<string[], CapstanEvent>>> categories;
 
-        private void AddEventAttribute(string category, string name, Func<string[], Query> instanceGetter)
+        private void AddEventAttribute(string category, string name, Func<string[], CapstanEvent> instanceGetter)
         {
             if (!categories.ContainsKey(category))
             {
-                categories.Add(category, new Dictionary<string, Func<string[], Query>>());
+                categories.Add(category, new Dictionary<string, Func<string[], CapstanEvent>>());
             }
 
             categories[category].Add(name, instanceGetter);
@@ -61,7 +68,7 @@ namespace Capstan
                 if (attr != null)
                 {
                     var paramType = new Type[] { typeof(object[]) };
-                    Func<string[], Query> func = (parameters) => (Query)type.GetConstructor(paramType).Invoke(parameters);
+                    Func<string[], CapstanEvent> func = (parameters) => (CapstanEvent)type.GetConstructor(paramType).Invoke(parameters);
                     AddEventAttribute(attr.Category, attr.Name, func);
                 }
             }
@@ -69,25 +76,20 @@ namespace Capstan
 
         private void Tick()
         {
-            var chunkSize = _eventList.Count / _threadNumber;
-
-            for (var i = 0; i < _threadNumber; i++)
-            {
-                var eventChunk = _eventList.DequeueChunk(chunkSize);
+                var eventChunk = _eventList.DequeueChunk(10);
                 //TODO: EventCulling!
                 // 1. Remove duplicate events
                 // 2. Remove events that are "too late", i.e. acting on something that disappears earlier in this chunk (How?)
                 Task.Factory.StartNew(() => ProcessBatch(eventChunk));
-            }
         }
 
-        private async Task ProcessBatch(IEnumerable<Query> batch)
+        private async Task ProcessBatch(IEnumerable<CapstanEvent> batch)
         {
             await Task.WhenAll(batch.Select(i => i.Process()));
             return;
         }
 
-        public void Push(Query e)
+        public void Push(CapstanEvent e)
         {
             _eventList.Enqueue(e);
             //We could use an event to trigger if the queue grows too big, but since we know when we are adding to it, I don't think we need it.

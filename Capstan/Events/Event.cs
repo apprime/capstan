@@ -9,10 +9,6 @@ namespace Capstan.Events
             //Prevent plebs from creating this outside of assembly.
         }
 
-        //public static event EventHandler EventResolved;
-        //public delegate void EventHandler(IEventResult result);
-        public abstract Task<ICommandResult> GatherData();
-        //public abstract Task<ICommandResult> Process();
-        public abstract Task<ICommandResult> Resolve();
+        public abstract Task<IEventResult> Process();
     }
 }

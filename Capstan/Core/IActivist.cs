@@ -7,7 +7,8 @@
     /// </summary>
     public interface IActivist
     {
-        
-        
+        //Todo: Make async
+        bool Condition();
+        void Activate();
     }
 }
