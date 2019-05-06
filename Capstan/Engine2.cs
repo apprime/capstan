@@ -2,8 +2,6 @@
 using Capstan.Events;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -19,29 +17,58 @@ namespace Capstan
             return await @event.Process();
         }
 
-        public void RegisterSubscriber<T>(IRaiseEvent<T> @event, IReactionary<T> reactionary)
+        private Dictionary<Type, Action<object>> _reactions;
+        public Engine2 RegisterReactionary<T>(Func<IReactionary<T>> setHandler)
         {
-
+            _reactions.Add(typeof(T), (evt) => setHandler().Subscribe((IRaiseEvent<T>)evt));
+            return this;
         }
 
-
-        private List<IActivist> _activists;
-        public void RegisterActivists()
+        private void RegisterActivists()
         {
-
-
             timer = new Timer(CapstanCycleEvent.OnTimerEvent, null, 1000, TickRate);
         }
 
-      
+        public Engine2 RegisterActivist(IActivist activist)
+        {
+            CapstanCycleEvent.RegisterActivist(activist);
+            return this;
+        }
+
+        public Engine2 RegisterActivists(params IActivist[] activists)
+        {
+            foreach (var activist in activists) { CapstanCycleEvent.RegisterActivist(activist); }
+            return this;
+        }
     }
 
-    public interface ISubscriber<T>
+    public class a
     {
-        Task Receive(T payload);
+        private class activister : IActivist
+        {
+            public void Activate()
+            {
+                throw new NotImplementedException();
+            }
+
+            public bool Condition()
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public a()
+        {
+            var e = new Engine2()
+                .RegisterActivists
+                (
+                    new activister(),
+                    new activister()
+                )
+                .RegisterActivist(new activister())
+                .RegisterReactionary(() => new ReactToLordZorkelbort());
+        }
     }
-
-
 
     /// <summary>
     /// An event reactionary is a class that reacts
@@ -49,7 +76,7 @@ namespace Capstan
     /// need to do anything specific, all we really 
     /// know is that they are triggered by events.
     /// </summary>
-    public class CustomReact : IReactionary<LordZorkelbortIsBack>
+    public class ReactToLordZorkelbort : IReactionary<LordZorkelbortIsBack>
     {
         public void Subscribe(IRaiseEvent<LordZorkelbortIsBack> @event)
         {
@@ -63,7 +90,7 @@ namespace Capstan
         }
     }
 
-    public class CustomEventHappens : IRaiseEvent<LordZorkelbortIsBack>
+    public class LordZorkelbortHappens : IRaiseEvent<LordZorkelbortIsBack>
     {
         public event EventHandler<LordZorkelbortIsBack> OnEvent;
         public void Main()

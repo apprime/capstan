@@ -1,15 +1,18 @@
 ﻿using Capstan.Core;
-using System;
 using System.Collections.Generic;
-using System.Reflection;
 
 namespace Capstan.Events
 {
+    /// <summary>
+    /// This is an internal event used by Capstan.
+    /// It cycles through all Activists to see if any should
+    /// be activated.
+    /// </summary>
     internal static class CapstanCycleEvent
     {
         private static List<IActivist> activists;
 
-        public static void RegisterActivist(IActivist activist)
+        internal static void RegisterActivist(IActivist activist)
         {
             activists.Add(activist);
         }
