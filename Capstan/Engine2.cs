@@ -7,38 +7,48 @@ using System.Threading.Tasks;
 
 namespace Capstan
 {
-    public class Engine2<TInput, TEventType>
+    //Q: Should we allow synchronous events at all?
+    //Q: Current model is to use outside type for User, then create a broadcaster
+    //   that handles this outside type. Should we instead have an internal broadcaster and a mapper?
+    public class Engine2<TInput, TEventType, TUser>
     {
-        private const int TickRate = 100;
+        private static event EventHandler<(string key, TEventType)> _incomingEvent;
         private Timer timer;
+        private const int TickRate = 100;
 
-        //We need to add a parser and a router.
-
-        public async Task<IEventResult> Push(TInput @event)
+        public Engine2()
         {
-            var mapped = _mapper(@event);
-
-            if(_routes.ContainsKey(mapped.Key))
-            {
-                //Create Event, call Sync
-                return _routes[mapped.Key](mapped.Value).Process();
-            }
-
-            if(_routesAsync.ContainsKey(mapped.Key))
-            {
-                return await _routesAsync[mapped.Key](mapped.Value).ProcessAsync();
-            }
-
-            throw new ArgumentException(
-                $"Incoming event with key {mapped.Key} does not exist as either an synchronous or asynchronous route. " +
-                $"Change the input key, or add a route to the engine during config, using either of the ConfigRoute methods.");
+            _incomingEvent += OnIncomingEvent;
         }
 
-        private Dictionary<Type, Action<object>> _reactions;
-        public Engine2<TInput, TEventType> RegisterReactionary<T>(Func<IReactionary<T>> setHandler)
+        public void Push(TInput @event)
         {
-            _reactions.Add(typeof(T), (evt) => setHandler().Subscribe((IRaiseEvent<T>)evt));
-            return this;
+            var mapped = _mapper(@event);
+            OnIncomingEvent(null, mapped);
+        }
+
+        public async void OnIncomingEvent(object e, (string key, TEventType value) eventArgs)
+        {
+            IEventResult res;
+            if (_routes.ContainsKey(eventArgs.key))
+            {
+                //Create Event, call Sync
+                res = _routes[eventArgs.key](eventArgs.value).Process();
+                Broadcaster.Set(res).Broadcast(eventArgs.value);
+            }
+
+            if (_routesAsync.ContainsKey(eventArgs.key))
+            {
+                //Create Event, call Async
+                res = await _routesAsync[eventArgs.key](eventArgs.value).ProcessAsync();
+                Broadcaster.Set(res).Broadcast(eventArgs.value);
+            }
+
+            //TODO: res should be put into the broadcaster. How does broadcaster know?
+
+            throw new ArgumentException(
+                $"Incoming event with key {eventArgs.key} does not exist as either an synchronous or asynchronous route." +
+                $" Change the input key, or add a route to the engine during config, using either of the ConfigRoute methods.");
         }
 
         private void RegisterActivists()
@@ -46,33 +56,31 @@ namespace Capstan
             timer = new Timer(CapstanCycleEvent.OnTimerEvent, null, 1000, TickRate);
         }
 
-        public Engine2<TInput, TEventType> RegisterActivist(IActivist activist)
+        public Engine2<TInput, TEventType, TUser> RegisterActivist(IActivist activist)
         {
             CapstanCycleEvent.RegisterActivist(activist);
             return this;
         }
-
-        public Engine2<TInput, TEventType> RegisterActivists(params IActivist[] activists)
+        public Engine2<TInput, TEventType, TUser> RegisterActivists(params IActivist[] activists)
         {
             foreach (var activist in activists) { CapstanCycleEvent.RegisterActivist(activist); }
             return this;
         }
 
         private Func<TInput, (string Key, TEventType Value)> _mapper;
-        public Engine2<TInput, TEventType> SetMapper(Func<TInput, (string Key, TEventType Value)> mapper)
+        public Engine2<TInput, TEventType, TUser> SetMapper(Func<TInput, (string Key, TEventType Value)> mapper)
         {
             _mapper = mapper;
             return this;
         }
 
         private Dictionary<string, Func<TEventType, CapstanEvent>> _routes;
-        public Engine2<TInput, TEventType> ConfigRoute(string key, Func<TEventType, CapstanEvent> eventFactory)
+        public Engine2<TInput, TEventType, TUser> ConfigRoute(string key, Func<TEventType, CapstanEvent> eventFactory)
         {
             _routes.TryAdd(key, eventFactory);
             return this;
         }
-
-        public Engine2<TInput, TEventType> ConfigRoutes(Dictionary<string, Func<TEventType, CapstanEvent>> routes)
+        public Engine2<TInput, TEventType, TUser> ConfigRoutes(Dictionary<string, Func<TEventType, CapstanEvent>> routes)
         {
             foreach (var route in routes)
             {
@@ -83,13 +91,12 @@ namespace Capstan
         }
 
         private Dictionary<string, Func<TEventType, CapstanEvent>> _routesAsync;
-        public Engine2<TInput, TEventType> ConfigRouteAsync(string key, Func<TEventType, CapstanEvent> eventFactory)
+        public Engine2<TInput, TEventType, TUser> ConfigRouteAsync(string key, Func<TEventType, CapstanEvent> eventFactory)
         {
             _routesAsync.TryAdd(key, eventFactory);
             return this;
         }
-
-        public Engine2<TInput, TEventType> ConfigRoutesAsync(Dictionary<string, Func<TEventType, CapstanEvent>> routes)
+        public Engine2<TInput, TEventType, TUser> ConfigRoutesAsync(Dictionary<string, Func<TEventType, CapstanEvent>> routes)
         {
             foreach (var route in routes)
             {
@@ -98,23 +105,35 @@ namespace Capstan
 
             return this;
         }
-    }
 
-    public interface IMapper<TInput, TEventData>
-    {
-        KeyValuePair<string, TEventData> Map(TInput input);
-    }
-
-    public class A : IMapper<string, int>
-    {
-        public KeyValuePair<string, int> Map(string input)
+        public Broadcaster<TEventType, TUser> Broadcaster { get; private set; }
+        public Engine2<TInput, TEventType, TUser> SetBroadcaster(Broadcaster<TEventType, TUser> broadcaster)
         {
-            return new KeyValuePair<string, int>("Hello", 4);
+            Broadcaster = broadcaster;
+            return this;
         }
 
+        public void Start()
+        {
+            if(Broadcaster == null)
+            {
+                throw new Exception("Broadcaster has not been set.");
+            }
+
+            if(_mapper == null)
+            {
+                throw new Exception("Mapper has not been set.");
+            }
+
+            RegisterActivists();
+        }
+    }
+
+    public class A
+    {
         public void Tst()
         {
-            var e = new Engine2<string[], string>();
+            var e = new Engine2<string[], string, object>();
 
 
             /*
@@ -130,6 +149,9 @@ namespace Capstan
 
              Using the Engine.SetMapper() method to hand the method over to the Engine, so that it can be
              used internally.
+
+             SetBroadcaster expect you to provide a broadcaster instance that inherits from Broadcaster<TPayload, TUser>.
+             It will allow your connected users to be notified when things happen.
 
              We then specify a number of routes by string name. There is currently no option to use other 
              types of keys than strings. For each key, we provide a factory method that will create the event for us.
@@ -147,71 +169,108 @@ namespace Capstan
             (string Key, string Value) EngineMapper(string[] input) => (Key: input[0], Value: input[1]);
 
             e.SetMapper(EngineMapper)
-             .ConfigRoute("Login", (evt) => new ReactToLordZorkelbort(evt))
+             .SetBroadcaster(new TestBroadcaster(null))
+             .ConfigRoute("Login", (evt) => new TestEvent(evt))
              .ConfigRoutes
              (
                 new Dictionary<string, Func<string, CapstanEvent>>
                 {
-                    { "Logout", (evt) => new ReactToLordZorkelbort(evt)},
-                    { "SomethingElse", (evt) => new ReactToLordZorkelbort(evt)}
+                    { "Logout", (evt) => new TestEvent(evt)},
+                    { "SomethingElse", (evt) => new TestEvent(evt)}
                 }
              )
-            .ConfigRouteAsync("LoginAsync", (evt) => new ReactToLordZorkelbort(evt))
+            //Obviously don't use the same names for multiple routes.
+            //The engine wont accept a second route with the same sync/async type,
+            //but you could technically add "abc" as a key to both sync and async routes.
+            //This results in the synchronous event always running for the key "abc".
+            .ConfigRouteAsync("LoginAsync", (evt) => new TestEvent(evt))
             .ConfigRoutesAsync
              (
                 new Dictionary<string, Func<string, CapstanEvent>>
                 {
-                    { "LogoutAsync", (evt) => new ReactToLordZorkelbort(evt)},
-                    { "SomethingElseAsync", (evt) => new ReactToLordZorkelbort(evt)}
+                    { "LogoutAsync", (evt) => new TestEvent(evt)},
+                    { "SomethingElseAsync", (evt) => new TestEvent(evt)}
                 }
-             );
+             )
+             .Start();
         }
     }
 
-    /// <summary>
-    /// An event reactionary is a class that reacts
-    /// to events raised by the system. They do not
-    /// need to do anything specific, all we really 
-    /// know is that they are triggered by events.
-    /// </summary>
-    public class ReactToLordZorkelbort : CapstanEvent, IReactionary<LordZorkelbortIsBack>
+    public class Activist : IActivist
     {
-        public ReactToLordZorkelbort(string data)
+        public void Activate()
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool Condition()
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class TestEvent : CapstanEvent
+    {
+        public TestEvent(object something)
         {
 
         }
 
-        public void Subscribe(IRaiseEvent<LordZorkelbortIsBack> @event)
-        {
-            @event.OnEvent += Handler;
-        }
-
-        public void Handler(object e, LordZorkelbortIsBack args)
-        {
-            // He is too strong
-            // There is nothing that can handle the lord!
-        }
         public override IEventResult Process()
         {
             throw new NotImplementedException();
         }
+
         public override Task<IEventResult> ProcessAsync()
         {
             throw new NotImplementedException();
         }
     }
 
-    public class LordZorkelbortHappens : IRaiseEvent<LordZorkelbortIsBack>
+    public class TestBroadcaster : Broadcaster<string, object>
     {
-        public event EventHandler<LordZorkelbortIsBack> OnEvent;
-        public void Main()
-        {
-            OnEvent?.Invoke(null, new LordZorkelbortIsBack());
-        }
-    }
+        protected object _currentUser = null;
+        private List<object> _allUsers = new List<object>();
+        private readonly object _userService;
+        private object _mappedObject;
 
-    public class LordZorkelbortIsBack : EventArgs
-    {
-        public int Important { get; set; } = 4;
+        public TestBroadcaster(object userService)
+        {
+            _userService = userService;
+        }
+
+        protected override IEnumerable<object> FilterUsers(string payload)
+        {
+            //What is inside the Where is just a placeholder for real logic.
+            return _allUsers.Where(i => payload.Contains((string)i));
+        }
+
+        internal override void Send(object user)
+        {
+            //Here we know what type User is, so we can use it to push a message
+            //user.someMethod(_mappedObject);
+
+            //Or, we have some internal service that can do it for us
+            //_userService.sendMessage(user, _mappedObject);
+        }
+
+        protected override Broadcaster<string, object> Set(string payload)
+        {
+            //Apply some mapping logic and save the value
+            _mappedObject = payload.Substring(3, 14);
+            return this;
+        }
+
+        internal override Broadcaster<string, object> Set(IEventResult payload)
+        {
+            //Apply some mapping logic and save the value
+            _mappedObject = payload.Resolution == EventResolutionType.Commit ? 3 : 14;
+            return this;
+        }
+
+        protected override void Unset()
+        {
+            _mappedObject = null;
+        }
     }
 }
