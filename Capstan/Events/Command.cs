@@ -12,6 +12,7 @@
 Istead, let each event be responsible for managing its own resources.
 Gather data when needed and persist when needed. This is more flexible and
 also prevents us from locking ourselves into rigid inherited behaviour.
+
  */
 //namespace Capstan.Events
 //{

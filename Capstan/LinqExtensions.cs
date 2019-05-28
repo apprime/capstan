@@ -5,6 +5,11 @@ namespace Capstan
 {
     internal static class LinqExtensions
     {
+        /// <summary>
+        /// Capstan extends Linq with a Where() that takes
+        /// a Predicate, instead of a Func, to do the same thing
+        /// as the func in standard linq extensions.
+        /// </summary>
         public static IEnumerable<T> Where<T>(this IEnumerable<T> source, Predicate<T> predicate)
         {
             if (source == null)

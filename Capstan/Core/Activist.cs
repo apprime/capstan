@@ -1,4 +1,6 @@
-﻿namespace Capstan.Core
+﻿using System.Threading.Tasks;
+
+namespace Capstan.Core
 {
     /// <summary>
     /// An activist is a class that is scheduled to do things.
@@ -7,8 +9,7 @@
     /// </summary>
     public interface Activist
     {
-        //Todo: Make async
         bool Condition();
-        void Activate();
+        Task Activate();
     }
 }

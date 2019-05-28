@@ -11,10 +11,11 @@ using System.Reactive.Linq;
 namespace Capstan
 {
     //Q: Should we allow synchronous events at all?
+    //Q: TInput likely needs information about origin.
     public class Capstan<TInput, TOutput>
     {
         private Timer timer;
-        private const int TickRate = 100;
+        private const int TickRate = 1000;
 
         /// <summary>
         /// Use the Instance method. It is designed to 
@@ -30,7 +31,7 @@ namespace Capstan
             return new Capstan<TInput, TOutput>();
         }
 
-        Subject<(string, TInput)> Events { get; } = new Subject<(string, TInput)>();
+        public Subject<(string, TInput)> Events { get; } = new Subject<(string, TInput)>();
 
         private async Task<IObserver<(string key, TInput value)>> Push((string key, TInput value) @event)
         {
@@ -46,6 +47,8 @@ namespace Capstan
                 await _routesAsync[@event.key](@event.value).ProcessAsync();
             }
 
+            //This should be logged and possibly returned to sender using TInput to figure that one out.
+            //TODO: Figure out nice way to deal with errors in general. ErrorClient? Still needs origin of client.
             throw new ArgumentException(
                 $"Incoming event with key {@event.key} does not exist as either an synchronous or asynchronous route." +
                 $" Change the input key, or add a route to the engine during config, using either of the ConfigRoute methods.");
@@ -64,7 +67,7 @@ namespace Capstan
 
         private void RegisterActivists()
         {
-            timer = new Timer(CapstanCycleEvent.OnTimerEvent, null, 1000, TickRate);
+            timer = new Timer(CapstanCycleEvent.OnTimerEvent, null, TickRate, TickRate);
         }
 
         public Capstan<TInput, TOutput> RegisterActivist(Core.Activist activist)
@@ -80,7 +83,7 @@ namespace Capstan
             return this;
         }
 
-        private Dictionary<string, Func<TInput, CapstanEvent>> _routes;
+        private Dictionary<string, Func<TInput, CapstanEvent>> _routes = new Dictionary<string, Func<TInput, CapstanEvent>>();
         public Capstan<TInput, TOutput> ConfigRoute(string key, Func<TInput, CapstanEvent> eventFactory)
         {
             _routes.TryAdd(key, eventFactory);
@@ -96,7 +99,7 @@ namespace Capstan
             return this;
         }
 
-        private Dictionary<string, Func<TInput, CapstanEvent>> _routesAsync;
+        private Dictionary<string, Func<TInput, CapstanEvent>> _routesAsync = new Dictionary<string, Func<TInput, CapstanEvent>>();
         public Capstan<TInput, TOutput> ConfigRouteAsync(string key, Func<TInput, CapstanEvent> eventFactory)
         {
             _routesAsync.TryAdd(key, eventFactory);
@@ -113,20 +116,20 @@ namespace Capstan
         }
 
         private Broadcaster<TOutput> _broadcaster = null;
-        private Func<Broadcaster<TOutput>> _broadcasterFactory = null;
+        private Func<List<CapstanClient<TInput, TOutput>>, Broadcaster<TOutput>> _broadcasterFactory = null;
         public Broadcaster<TOutput> Broadcaster
         {
             get
             {
                 if (_broadcaster == null)
                 {
-                    _broadcaster = _broadcasterFactory();
+                    _broadcaster = _broadcasterFactory(_clients);
                 }
                 return _broadcaster;
             }
         }
 
-        public Capstan<TInput, TOutput> SetBroadcaster(Func<Broadcaster<TOutput>> factory)
+        public Capstan<TInput, TOutput> SetBroadcaster(Func<List<CapstanClient<TInput, TOutput>>, Broadcaster<TOutput>> factory)
         {
             _broadcasterFactory = factory;
             return this;
@@ -175,7 +178,7 @@ namespace Capstan
              */
 
             Capstan<string[], string>.Instance()
-             .SetBroadcaster(() => new TestBroadcaster(null))
+             .SetBroadcaster((clients) => new TestBroadcaster(clients))
              .RegisterActivist(new TestActivist())
              .ConfigRoute("Login", (evt) => new TestEvent(evt))
              .ConfigRoutes
@@ -205,14 +208,16 @@ namespace Capstan
 
     public class TestActivist : Activist
     {
-        public void Activate()
+        private int counter = 1;
+        public async Task Activate()
         {
-            throw new NotImplementedException();
+            await Task.Factory.StartNew(() => throw new NotImplementedException());
         }
 
         public bool Condition()
         {
-            throw new NotImplementedException();
+            //Increase one every time we check, return true every 10 times.
+            return ++counter % 10 == 0;
         }
     }
 
@@ -236,9 +241,10 @@ namespace Capstan
 
     public class TestUser : CapstanClient<string[], string>
     {
-        public TestUser()
+        private readonly Subject<(string, string[])> Events;
+        public TestUser(Subject<(string, string[])> events)
         {
-
+            Events = events;
         }
 
         public void Receive(string output)
@@ -249,22 +255,22 @@ namespace Capstan
 
         public void Send(string[] input)
         {
-            
+            Events.OnNext(("Logout", new[] { "Goodbye", "Thanks", "Fish" }));
         }
     }
 
     public class TestBroadcaster : Broadcaster<string>
     {
-        private readonly object innerDep;
+        private readonly List<CapstanClient<string[], string>> innerDep;
 
-        public TestBroadcaster(object myDependency)
+        public TestBroadcaster(List<CapstanClient<string[], string>> users)
         {
-            innerDep = myDependency;
+            innerDep = users;
         }
 
         public override IEnumerable<CapstanReceiver<string>> Clients
         {
-            get => throw new NotImplementedException("return innerDep.GetClients();");
+            get => innerDep;
         }
     }
 }
