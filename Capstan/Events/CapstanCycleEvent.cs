@@ -10,9 +10,9 @@ namespace Capstan.Events
     /// </summary>
     internal static class CapstanCycleEvent
     {
-        private static List<IActivist> activists;
+        private static List<Core.Activist> activists;
 
-        internal static void RegisterActivist(IActivist activist)
+        internal static void RegisterActivist(Core.Activist activist)
         {
             activists.Add(activist);
         }
