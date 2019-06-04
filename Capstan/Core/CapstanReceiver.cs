@@ -1,6 +1,4 @@
-﻿using Capstan.Events;
-
-namespace Capstan.Core
+﻿namespace Capstan.Core
 {
     public interface CapstanReceiver<TOutput>
     {

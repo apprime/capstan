@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="System.Reactive" Version="4.2.0-preview.102" />
+    <PackageReference Include="Unity" Version="5.10.3" />
   </ItemGroup>
 
 </Project>
