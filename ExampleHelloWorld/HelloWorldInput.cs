@@ -2,7 +2,7 @@
 
 namespace ExampleHelloWorld
 {
-    class HelloWorldInput : Message
+    public class HelloWorldInput : Message
     {
         public HelloWorldInput(string newValue)
         {

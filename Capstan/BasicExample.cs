@@ -106,7 +106,7 @@ namespace Capstan
         }
     }
 
-    public class TestEvent : CapstanEvent<string>
+    public class TestEvent : CapstanEvent<TestInput, string>
     {
         public TestEvent(TestInput something)
         {
@@ -124,7 +124,7 @@ namespace Capstan
         }
     }
 
-    public class TestComplexEvent : CapstanEvent<string>
+    public class TestComplexEvent : CapstanEvent<TestInput, string>
     {
         public TestComplexEvent(IEnterpriseBusinessDependency enterpriseBusinessDependency, ICapstanImplementation capstanImpmentation, string favouriteGoat)
         {
@@ -169,16 +169,16 @@ namespace Capstan
         }
     }
 
-    public class TestBroadcaster : Broadcaster<string>
+    public class TestBroadcaster : Broadcaster<TestInput,string>
     {
-        private readonly List<Receiver<string>> innerDep;
+        private readonly List<Client<TestInput, string>> innerDep;
 
-        public TestBroadcaster(List<Receiver<string>> users)
+        public TestBroadcaster(List<Client<TestInput, string>> users)
         {
             innerDep = users;
         }
 
-        public override IEnumerable<Receiver<string>> Clients
+        public override IEnumerable<Client<TestInput, string>> Clients
         {
             get => innerDep;
         }
@@ -196,7 +196,7 @@ namespace Capstan
         }
     }
 
-    public class ChainOfCommandComplexEventOne : CapstanEvent<string>
+    public class ChainOfCommandComplexEventOne : CapstanEvent<TestInput, string>
     {
         private ChainOfCommandComplexEventTwo _testComplexEvent;
 
@@ -217,7 +217,7 @@ namespace Capstan
         }
     }
 
-    public class ChainOfCommandComplexEventTwo : CapstanEvent<string>
+    public class ChainOfCommandComplexEventTwo : CapstanEvent<TestInput, string>
     {
         private TestComplexEvent _testComplexEvent;
 

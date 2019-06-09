@@ -21,7 +21,7 @@ namespace Capstan.Core
     /// consistent filtering among clients that should be interested.
     /// 
     /// </summary>
-    public abstract class Broadcaster<TOutput>
+    public abstract class Broadcaster<TInput, TOutput>
     { 
         public Broadcaster()
         { }
@@ -36,8 +36,8 @@ namespace Capstan.Core
             _filter = (i) => true;
         }
 
-        private Predicate<Receiver<TOutput>> _filter = (i) => true;
-        public Broadcaster<TOutput> Filter(Predicate<Receiver<TOutput>> filter)
+        private Predicate<Client<TInput, TOutput>> _filter = (i) => true;
+        public Broadcaster<TInput, TOutput> Filter(Predicate<Client<TInput, TOutput>> filter)
         {
             _filter = filter;
             return this;
@@ -47,6 +47,6 @@ namespace Capstan.Core
         /// Inside of the broadcaster there should be some way to know
         /// which clients are connected. (Inject a dependency in your concrete implementation)
         /// </summary>
-        public abstract IEnumerable<Receiver<TOutput>> Clients { get; }
+        public abstract IEnumerable<Client<TInput, TOutput>> Clients { get; }
     }
 }

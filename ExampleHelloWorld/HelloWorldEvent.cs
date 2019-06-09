@@ -1,8 +1,9 @@
 ﻿using System.Threading.Tasks;
+using Capstan.Events;
 
 namespace ExampleHelloWorld
 {
-    public class HelloWorldEvent : Capstan.Events.CapstanEvent<string>
+    public class HelloWorldEvent : CapstanEvent<HelloWorldInput, string>
     {
         private readonly string _value;
 

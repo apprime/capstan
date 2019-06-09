@@ -26,7 +26,7 @@ namespace Capstan
             return this;
         }
 
-        public Builder<TInput, TOutput> SetBroadcaster(Func<List<Receiver<TOutput>>, IUnityContainer, Broadcaster<TOutput>> factory)
+        public Builder<TInput, TOutput> SetBroadcaster(Func<List<Client<TInput, TOutput>>, IUnityContainer, Broadcaster<TInput, TOutput>> factory)
         {
             _instance.BroadcasterFactory = factory;
             return this;
@@ -47,13 +47,13 @@ namespace Capstan
             return this;
         }
 
-        public Builder<TInput, TOutput> AddRoute(string key, Func<TInput, IUnityContainer, CapstanEvent<TOutput>> eventFactory)
+        public Builder<TInput, TOutput> AddRoute(string key, Func<TInput, IUnityContainer, CapstanEvent<TInput, TOutput>> eventFactory)
         {
             _instance.Routes.TryAdd(key, eventFactory);
             return this;
         }
 
-        public Builder<TInput, TOutput> AddRouteAsync(string key, Func<TInput, IUnityContainer, CapstanEvent<TOutput>> eventFactory)
+        public Builder<TInput, TOutput> AddRouteAsync(string key, Func<TInput, IUnityContainer, CapstanEvent<TInput, TOutput>> eventFactory)
         {
             _instance.RoutesAsync.TryAdd(key, eventFactory);
             return this;

@@ -15,10 +15,10 @@ namespace Capstan
         private const int TickRate = 1000;
         private bool _started;
         private ErrorManager<TOutput> _errorManager;
-        private Broadcaster<TOutput> _broadcaster;
+        private Broadcaster<TInput, TOutput> _broadcaster;
         private List<(Client<TInput, TOutput> client, IDisposable subscription)> _clients;
-        private Timer _timer;
-        private IUnityContainer _dependencyContainer;
+        private readonly Timer _timer;
+        private readonly IUnityContainer _dependencyContainer;
 
         /// <summary>
         /// This is private.
@@ -33,12 +33,12 @@ namespace Capstan
             _errorManager = null;
             _timer = new Timer(CapstanCycleEvent.OnTimerEvent, null, TickRate, TickRate);
             _dependencyContainer = new UnityContainer();
-            RoutesAsync = new Dictionary<string, Func<TInput, IUnityContainer, CapstanEvent<TOutput>>>();
-            Routes = new Dictionary<string, Func<TInput, IUnityContainer, CapstanEvent<TOutput>>>();
+            RoutesAsync = new Dictionary<string, Func<TInput, IUnityContainer, CapstanEvent<TInput, TOutput>>>();
+            Routes = new Dictionary<string, Func<TInput, IUnityContainer, CapstanEvent<TInput, TOutput>>>();
         }
 
         public IUnityContainer Dependencies { get; internal set; }
-        public Broadcaster<TOutput> Broadcaster
+        public Broadcaster<TInput, TOutput> Broadcaster
         {
             get
             {
@@ -64,7 +64,7 @@ namespace Capstan
 
         public void Subscribe(Client<TInput, TOutput> client)
         {
-            var subscription = client.Messages.Subscribe(async (i) => 
+            var subscription = client.Messages.Subscribe(async (i) =>
             {
                 await Push(i);
             });
@@ -92,9 +92,9 @@ namespace Capstan
         {
             _errorManager = errorManager;
         }
-        internal Dictionary<string, Func<TInput, IUnityContainer, CapstanEvent<TOutput>>> Routes { get; }
-        internal Dictionary<string, Func<TInput, IUnityContainer, CapstanEvent<TOutput>>> RoutesAsync { get; }
-        internal Func<List<Receiver<TOutput>>, IUnityContainer, Broadcaster<TOutput>> BroadcasterFactory { get; set; }
+        internal Dictionary<string, Func<TInput, IUnityContainer, CapstanEvent<TInput, TOutput>>> Routes { get; }
+        internal Dictionary<string, Func<TInput, IUnityContainer, CapstanEvent<TInput, TOutput>>> RoutesAsync { get; }
+        internal Func<List<Client<TInput, TOutput>>, IUnityContainer, Broadcaster<TInput, TOutput>> BroadcasterFactory { get; set; }
         internal Func<Dictionary<int, Receiver<TOutput>>, IUnityContainer, ErrorManager<TOutput>> ErrorManagerFactory { get; set; }
 
         private async Task Push((string key, TInput value) @event)
@@ -135,11 +135,10 @@ namespace Capstan
             }
         }
 
-        private List<Receiver<TOutput>> ConvertClientsToReceivers()
+        private List<Client<TInput, TOutput>> ConvertClientsToReceivers()
         {
             return _clients
                 .Select(i => i.client)
-                .Cast<Receiver<TOutput>>()
                 .ToList();
         }
 
