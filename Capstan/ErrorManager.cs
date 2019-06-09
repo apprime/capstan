@@ -1,7 +1,6 @@
 ﻿using Capstan.Core;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Capstan
 {
@@ -15,29 +14,24 @@ namespace Capstan
     /// can be overridden to include for example a logger service, or 
     /// a logger client that also Receive()'s the error.
     /// </summary>
-    public abstract class ErrorManager<TInput, TOutput> where TInput : CapstanMessage
+    public abstract class ErrorManager<TOutput>
     {
-        private List<CapstanClient<TInput, TOutput>> _clients;
-
-        public ErrorManager(List<CapstanClient<TInput, TOutput>> clients)
-        {
-            _clients = clients;
-        }
-
         public abstract TOutput ParseError(Exception ex);
 
-        public virtual void ReturnToSender((string key, TInput value) @event, Exception ex)
+        public virtual void ReturnToSender(int senderId, Exception ex)
         {
-            _clients
-                .Where(i => GetSender(i, @event.value))
-                .Single()
-                .Receive(ParseError(ex));
+            if (Clients.ContainsKey(senderId))
+            {
+                Clients[senderId].Receive(ParseError(ex));
+            }
+            else
+            {
+                //TODO: Log error when no sender was found.
+            }
+
         }
 
-        public virtual bool GetSender(CapstanClient<TInput, TOutput> client, TInput @event)
-        {
-            return client.Id == @event.SenderId;
-        }
+        protected abstract Dictionary<int, Receiver<TOutput>> Clients { get; set; }
 
         /// <summary>
         /// This is a standard error that should be returned when a route cannot be found.

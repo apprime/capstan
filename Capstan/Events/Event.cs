@@ -1,10 +1,14 @@
-﻿using System.Threading.Tasks;
+﻿using Capstan.Core;
+using System.Threading.Tasks;
 
 namespace Capstan.Events
 {
-    public interface CapstanEvent
+    public abstract class CapstanEvent<TOutput>
     {
-        void Process();
-        Task ProcessAsync();
+        public abstract void Process();
+        public abstract Task ProcessAsync();
+
+        protected internal Broadcaster<TOutput> Broadcaster { set; protected get; }
+        protected internal ErrorManager<TOutput> ErrorManager { set; protected get; }
     }
 }

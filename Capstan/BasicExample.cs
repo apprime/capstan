@@ -2,6 +2,7 @@
 using Capstan.Events;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reactive.Subjects;
 using System.Threading.Tasks;
 using Unity;
@@ -53,36 +54,22 @@ namespace Capstan
              some information - a string in this example.
              */
 
-            var capstan = CapstanBuilder<TestInput, string>
+            var capstan = Builder<TestInput, string>
                 .New()
-                .SetBroadcaster(clients => new TestBroadcaster(clients))
-                .SetErrorManager(clients => new TestErrorManager(clients))
+                .SetBroadcaster((clients, dependencies) => new TestBroadcaster(clients))
+                .SetErrorManager((clients, dependencies) => new TestErrorManager(clients))
                 .RegisterActivist(new TestActivist())
                 .RegisterDependencies(container =>
                 {
                     container.RegisterType<IEnterpriseBusinessDependency, EnterpriseBusinessDependency>(new TransientLifetimeManager());
                 })
-                .ConfigRoute("Login", (evt, deps) => new TestEvent(evt))
-                .ConfigRoutes
-                (
-                   new Dictionary<string, Func<TestInput, IUnityContainer, CapstanEvent>>
-                   {
-                       { "Logout", (evt, deps) => new TestEvent(evt)},
-                       { "SomethingElse", (evt, deps) => new ChainOfCommandComplexEventOne(evt, deps)}
-                   }
-                )
+                .AddRoute("Login", (evt, deps) => new TestEvent(evt))
+                .AddRoute("Logout", (evt, deps) => new ChainOfCommandComplexEventOne(evt, deps))
                 //Obviously don't use the same names for multiple routes.
                 //The engine wont throw exceptions but additional Events are not added.
                 //Also, Synchronous events wont be allowed for final version(Don't ask me when the final version is).
-                .ConfigRouteAsync("LoginAsync", (evt, deps) => new ChainOfCommandComplexEventOne(evt, deps))
-                .ConfigRoutesAsync
-                (
-                   new Dictionary<string, Func<TestInput, IUnityContainer, CapstanEvent>>
-                   {
-                       { "LogoutAsync", (evt, deps) => new TestEvent(evt)},
-                       { "SomethingElseAsync", (evt, deps) => new ChainOfCommandComplexEventOne(evt, deps)}
-                   }
-                )
+                .AddRouteAsync("LoginAsync", (evt, deps) => new ChainOfCommandComplexEventOne(evt, deps))
+                .AddRouteAsync("LogoutAsync", (evt, deps) => new TestEvent(evt))
                 .Build();
 
             capstan.Start();
@@ -90,11 +77,11 @@ namespace Capstan
             var user = new TestUser();
             capstan.Subscribe(user);
 
-            user.Send(new TestInput("Demo!"));
+            user.Send("Login", new TestInput("Demo!"));
         }
     }
 
-    public class TestInput : CapstanMessage
+    public class TestInput : Message
     {
         public TestInput(string input)
         {
@@ -119,25 +106,25 @@ namespace Capstan
         }
     }
 
-    public class TestEvent : CapstanEvent
+    public class TestEvent : CapstanEvent<string>
     {
         public TestEvent(TestInput something)
         {
 
         }
 
-        public void Process()
+        public override void Process()
         {
             throw new NotImplementedException();
         }
 
-        public Task ProcessAsync()
+        public override Task ProcessAsync()
         {
             throw new NotImplementedException();
         }
     }
 
-    public class TestComplexEvent : CapstanEvent
+    public class TestComplexEvent : CapstanEvent<string>
     {
         public TestComplexEvent(IEnterpriseBusinessDependency enterpriseBusinessDependency, ICapstanImplementation capstanImpmentation, string favouriteGoat)
         {
@@ -146,18 +133,19 @@ namespace Capstan
 
         public static int FavouriteGoatId { get; } = 3;
 
-        public void Process()
+        public override void Process()
         {
+            Broadcaster.Broadcast("This message is sent to all connected clients");
             throw new NotImplementedException();
         }
 
-        public Task ProcessAsync()
+        public override Task ProcessAsync()
         {
             throw new NotImplementedException();
         }
     }
 
-    public class TestUser : CapstanClient<TestInput, string>
+    public class TestUser : Client<TestInput, string>
     {
         public TestUser()
         {
@@ -173,32 +161,34 @@ namespace Capstan
             //and does whatever it wants.
         }
 
-        public void Send(TestInput input)
+        public void Send(string key, TestInput input)
         {
             //Somewhere someone tells CapstanClient to cc.Send(stuff);
             //This results in a message that is pushed into the grinder.
-            Messages.OnNext(("Logout", input));
+            Messages.OnNext((key, input));
         }
     }
 
     public class TestBroadcaster : Broadcaster<string>
     {
-        private readonly List<CapstanReceiver<string>> innerDep;
+        private readonly List<Receiver<string>> innerDep;
 
-        public TestBroadcaster(List<CapstanReceiver<string>> users)
+        public TestBroadcaster(List<Receiver<string>> users)
         {
             innerDep = users;
         }
 
-        public override IEnumerable<CapstanReceiver<string>> Clients
+        public override IEnumerable<Receiver<string>> Clients
         {
             get => innerDep;
         }
     }
 
-    public class TestErrorManager : ErrorManager<TestInput, string>
+    public class TestErrorManager : ErrorManager<string>
     {
-        public TestErrorManager(List<CapstanClient<TestInput, string>> clients) : base(clients) { }
+        public TestErrorManager(Dictionary<int, Receiver<string>> clients) { Clients = clients; }
+
+        protected override Dictionary<int, Receiver<string>> Clients { get; set; }
 
         public override string ParseError(Exception ex)
         {
@@ -206,7 +196,7 @@ namespace Capstan
         }
     }
 
-    public class ChainOfCommandComplexEventOne : CapstanEvent
+    public class ChainOfCommandComplexEventOne : CapstanEvent<string>
     {
         private ChainOfCommandComplexEventTwo _testComplexEvent;
 
@@ -216,18 +206,18 @@ namespace Capstan
             _testComplexEvent = new ChainOfCommandComplexEventTwo(input, ebd);
         }
 
-        public void Process()
+        public override void Process()
         {
             _testComplexEvent.Process();
         }
 
-        public async Task ProcessAsync()
+        public override async Task ProcessAsync()
         {
             await _testComplexEvent.ProcessAsync();
         }
     }
 
-    public class ChainOfCommandComplexEventTwo : CapstanEvent
+    public class ChainOfCommandComplexEventTwo : CapstanEvent<string>
     {
         private TestComplexEvent _testComplexEvent;
 
@@ -239,12 +229,12 @@ namespace Capstan
             _testComplexEvent = new TestComplexEvent(ebd, cid, goat);
         }
 
-        public void Process()
+        public override void Process()
         {
             _testComplexEvent.Process();
         }
 
-        public async Task ProcessAsync()
+        public override async Task ProcessAsync()
         {
             await _testComplexEvent.ProcessAsync();
         }

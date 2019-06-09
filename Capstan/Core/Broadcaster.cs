@@ -36,8 +36,8 @@ namespace Capstan.Core
             _filter = (i) => true;
         }
 
-        private Predicate<CapstanReceiver<TOutput>> _filter = (i) => true;
-        public Broadcaster<TOutput> Filter(Predicate<CapstanReceiver<TOutput>> filter)
+        private Predicate<Receiver<TOutput>> _filter = (i) => true;
+        public Broadcaster<TOutput> Filter(Predicate<Receiver<TOutput>> filter)
         {
             _filter = filter;
             return this;
@@ -47,6 +47,6 @@ namespace Capstan.Core
         /// Inside of the broadcaster there should be some way to know
         /// which clients are connected. (Inject a dependency in your concrete implementation)
         /// </summary>
-        public abstract IEnumerable<CapstanReceiver<TOutput>> Clients { get; }
+        public abstract IEnumerable<Receiver<TOutput>> Clients { get; }
     }
 }

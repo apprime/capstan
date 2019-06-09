@@ -2,10 +2,10 @@
 
 namespace Capstan.Core
 {
-    public interface CapstanSender<TInput>
+    public interface Sender<TInput>
     {
         Subject<(string key, TInput value)> Messages { get; }
-        int Id { get;  }
-        void Send(TInput input);
+        int Id { get; }
+        void Send(string key, TInput input);
     }
 }

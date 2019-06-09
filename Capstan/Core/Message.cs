@@ -1,6 +1,6 @@
 ﻿namespace Capstan
 {
-    public interface CapstanMessage
+    public interface Message
     {
         int SenderId { get; }
     }

@@ -6,45 +6,39 @@ using Unity;
 
 namespace Capstan
 {
-    public class CapstanBuilder<TInput,TOutput> where TInput : CapstanMessage 
+    public class Builder<TInput,TOutput> where TInput : Message 
     {
         private Capstan<TInput, TOutput> _instance;
         private IUnityContainer _dependencyContainer;
 
-        public static CapstanBuilder<TInput, TOutput> New()
+        public static Builder<TInput, TOutput> New()
         {
-            var builder = new CapstanBuilder<TInput, TOutput>();
+            var builder = new Builder<TInput, TOutput>();
             builder._dependencyContainer = new UnityContainer();
             builder._instance = new Capstan<TInput, TOutput>();
             return builder;
         }
 
         public IUnityContainer Dependencies { get; }
-        public CapstanBuilder<TInput, TOutput> RegisterDependencies(Action<IUnityContainer> action)
+        public Builder<TInput, TOutput> RegisterDependencies(Action<IUnityContainer> action)
         {
             action(Dependencies);
             return this;
         }
 
-        public CapstanBuilder<TInput, TOutput> Begin(Capstan<TInput, TOutput> capstan)
-        {
-            _instance = capstan;
-            return this;
-        }
-
-        public CapstanBuilder<TInput, TOutput> SetBroadcaster(Func<List<CapstanReceiver<TOutput>>, Broadcaster<TOutput>> factory)
+        public Builder<TInput, TOutput> SetBroadcaster(Func<List<Receiver<TOutput>>, IUnityContainer, Broadcaster<TOutput>> factory)
         {
             _instance.BroadcasterFactory = factory;
             return this;
         }
         
-        public CapstanBuilder<TInput, TOutput> SetErrorManager(Func<List<CapstanClient<TInput, TOutput>>, ErrorManager<TInput, TOutput>> factory)
+        public Builder<TInput, TOutput> SetErrorManager(Func<Dictionary<int, Receiver<TOutput>>, IUnityContainer, ErrorManager<TOutput>> factory)
         {
             _instance.ErrorManagerFactory = factory;
             return this;
         }
 
-        public CapstanBuilder<TInput, TOutput> RegisterActivist(Activist activist)
+        public Builder<TInput, TOutput> RegisterActivist(Activist activist)
         {
             //TODO: Take factory method here. 
             // We want to be able to kill and regenerate activists.
@@ -53,35 +47,15 @@ namespace Capstan
             return this;
         }
 
-        public CapstanBuilder<TInput, TOutput> ConfigRoute(string key, Func<TInput, IUnityContainer, CapstanEvent> eventFactory)
+        public Builder<TInput, TOutput> AddRoute(string key, Func<TInput, IUnityContainer, CapstanEvent<TOutput>> eventFactory)
         {
             _instance.Routes.TryAdd(key, eventFactory);
             return this;
         }
 
-        public CapstanBuilder<TInput, TOutput> ConfigRoutes(Dictionary<string, Func<TInput, IUnityContainer, CapstanEvent>> routes)
-        {
-            foreach (var route in routes)
-            {
-                _instance.Routes.TryAdd(route.Key, route.Value);
-            }
-
-            return this;
-        }
-
-        public CapstanBuilder<TInput, TOutput> ConfigRouteAsync(string key, Func<TInput, IUnityContainer, CapstanEvent> eventFactory)
+        public Builder<TInput, TOutput> AddRouteAsync(string key, Func<TInput, IUnityContainer, CapstanEvent<TOutput>> eventFactory)
         {
             _instance.RoutesAsync.TryAdd(key, eventFactory);
-            return this;
-        }
-
-        public CapstanBuilder<TInput, TOutput> ConfigRoutesAsync(Dictionary<string, Func<TInput, IUnityContainer, CapstanEvent>> routes)
-        {
-            foreach (var route in routes)
-            {
-                _instance.RoutesAsync.TryAdd(route.Key, route.Value);
-            }
-
             return this;
         }
 
@@ -103,7 +77,6 @@ namespace Capstan
             }
 
             _instance.Dependencies = _dependencyContainer;
-            _instance.RegisterActivists();
 
             return _instance;
         }
