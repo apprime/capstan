@@ -1,7 +1,7 @@
 ﻿namespace Capstan.Core
 {
-    public interface Receiver<TOutput>
+    public interface Receiver<ReturnedType>
     {
-        void Receive(TOutput output);
+        void Receive(ReturnedType output);
     }
 }

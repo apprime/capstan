@@ -7,9 +7,10 @@ namespace Capstan.Core
     /// These things are not reaction to other things, 
     /// they are simply created by the system.
     /// </summary>
-    public interface Activist
+    public abstract class Activist<IncomingType, ReturnedType> where IncomingType : Message
     {
-        bool Condition();
-        Task Activate();
+        internal Broadcaster<IncomingType, ReturnedType>  Broadcaster { set; private get; }
+        public abstract bool Condition();
+        public abstract Task Activate();
     }
 }

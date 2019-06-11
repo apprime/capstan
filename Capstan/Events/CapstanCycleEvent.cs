@@ -1,6 +1,5 @@
 ﻿using Capstan.Core;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Capstan.Events
@@ -13,6 +12,7 @@ namespace Capstan.Events
     internal static class CapstanCycleEvent
     {
         private static List<Activist> activists = new List<Activist>();
+        internal static bool Cycling = false;
 
         internal static void RegisterActivist(Activist activist)
         {
@@ -21,8 +21,11 @@ namespace Capstan.Events
 
         public static void OnTimerEvent(object sender)
         {
-            Task.Factory.StartNew(() =>
-                Parallel.ForEach(activists.Where(i => i.Condition()), i => i.Activate())
+            if (!Cycling) { return; }
+
+            Task.Factory.StartNew
+            (
+                () => Parallel.ForEach(activists.Where(i => i.Condition()), i => i.Activate())
             );
         }
     }

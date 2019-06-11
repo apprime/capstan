@@ -6,60 +6,58 @@ using Unity;
 
 namespace Capstan
 {
-    public class Builder<TInput,TOutput> where TInput : Message 
+    public class Builder<IncomingType,ReturnedType> where IncomingType : Message 
     {
-        private Capstan<TInput, TOutput> _instance;
+        private Capstan<IncomingType, ReturnedType> _instance;
         private IUnityContainer _dependencyContainer;
 
-        public static Builder<TInput, TOutput> New()
+        public static Builder<IncomingType, ReturnedType> New()
         {
-            var builder = new Builder<TInput, TOutput>();
+            var builder = new Builder<IncomingType, ReturnedType>();
             builder._dependencyContainer = new UnityContainer();
-            builder._instance = new Capstan<TInput, TOutput>();
+            builder._instance = new Capstan<IncomingType, ReturnedType>();
             return builder;
         }
 
         public IUnityContainer Dependencies { get; }
-        public Builder<TInput, TOutput> RegisterDependencies(Action<IUnityContainer> action)
+        public Builder<IncomingType, ReturnedType> RegisterDependencies(Action<IUnityContainer> action)
         {
             action(Dependencies);
             return this;
         }
 
-        public Builder<TInput, TOutput> SetBroadcaster(Func<List<Client<TInput, TOutput>>, IUnityContainer, Broadcaster<TInput, TOutput>> factory)
+        public Builder<IncomingType, ReturnedType> SetBroadcaster(Func<IUnityContainer, Broadcaster<IncomingType, ReturnedType>> factory)
         {
             _instance.BroadcasterFactory = factory;
             return this;
         }
         
-        public Builder<TInput, TOutput> SetErrorManager(Func<Dictionary<int, Receiver<TOutput>>, IUnityContainer, ErrorManager<TOutput>> factory)
+        public Builder<IncomingType, ReturnedType> SetErrorManager(Func<IUnityContainer, ErrorManager<ReturnedType>> factory)
         {
             _instance.ErrorManagerFactory = factory;
             return this;
         }
 
-        public Builder<TInput, TOutput> RegisterActivist(Activist activist)
+        private List<Func<IUnityContainer, Activist<IncomingType, ReturnedType>>> _activistFactories = new List<Func<IUnityContainer, Activist<IncomingType, ReturnedType>>>();
+        public Builder<IncomingType, ReturnedType> RegisterActivist(Func<IUnityContainer, Activist<IncomingType, ReturnedType>> activistFactory)
         {
-            //TODO: Take factory method here. 
-            // We want to be able to kill and regenerate activists.
-            // Also, we need to be able to inject dependencies into them.
-            CapstanCycleEvent.RegisterActivist(activist);
+            _activistFactories.Add(activistFactory);
             return this;
         }
 
-        public Builder<TInput, TOutput> AddRoute(string key, Func<TInput, IUnityContainer, CapstanEvent<TInput, TOutput>> eventFactory)
+        public Builder<IncomingType, ReturnedType> AddRoute(string key, Func<IncomingType, IUnityContainer, CapstanEvent<IncomingType, ReturnedType>> eventFactory)
         {
             _instance.Routes.TryAdd(key, eventFactory);
             return this;
         }
 
-        public Builder<TInput, TOutput> AddRouteAsync(string key, Func<TInput, IUnityContainer, CapstanEvent<TInput, TOutput>> eventFactory)
+        public Builder<IncomingType, ReturnedType> AddRouteAsync(string key, Func<IncomingType, IUnityContainer, CapstanEvent<IncomingType, ReturnedType>> eventFactory)
         {
             _instance.RoutesAsync.TryAdd(key, eventFactory);
             return this;
         }
 
-        public Capstan<TInput, TOutput> Build()
+        public Capstan<IncomingType, ReturnedType> Build()
         {
             if (_instance.BroadcasterFactory == null)
             {
@@ -77,6 +75,7 @@ namespace Capstan
             }
 
             _instance.Dependencies = _dependencyContainer;
+            _instance.ActivistFactories = _activistFactories;
 
             return _instance;
         }

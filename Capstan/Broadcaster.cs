@@ -1,7 +1,10 @@
-﻿using System;
+﻿using Capstan.Core;
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reactive.Subjects;
 
-namespace Capstan.Core
+namespace Capstan
 {
     /// <summary>
     /// A broadcaster is a class that converts information from Captstan Events 
@@ -21,32 +24,47 @@ namespace Capstan.Core
     /// consistent filtering among clients that should be interested.
     /// 
     /// </summary>
-    public abstract class Broadcaster<TInput, TOutput>
-    { 
+    public class Broadcaster<IncomingType, ReturnedType> where IncomingType : Message
+    {
+        internal Func<List<Client<IncomingType, ReturnedType>>> InternalClients { private get;  set; }
+        internal Subject<(string key, IncomingType payload)> Messages { get; private set; }
+
         public Broadcaster()
-        { }
+        {
+            Messages = new Subject<(string key, IncomingType payload)>();
+        }
 
         /// <summary>
         /// This method pushes 
         /// </summary>
         /// <param name="payload"></param>
-        public void Broadcast(TOutput payload)
+        public virtual void Broadcast(ReturnedType payload)
         {
             foreach (var client in Clients.Where(_filter)){ client.Receive(payload); }
             _filter = (i) => true;
         }
 
-        private Predicate<Client<TInput, TOutput>> _filter = (i) => true;
-        public Broadcaster<TInput, TOutput> Filter(Predicate<Client<TInput, TOutput>> filter)
+        private Predicate<Client<IncomingType, ReturnedType>> _filter = (i) => true;
+        public virtual Broadcaster<IncomingType, ReturnedType> Filter(Predicate<Client<IncomingType, ReturnedType>> filter)
         {
             _filter = filter;
             return this;
+        }
+
+        public virtual void ToSender(IncomingType input, ReturnedType payload)
+        {
+            Clients.Single(i => i.Id == input.SenderId).Receive(payload);
+        }
+
+        public virtual void ToCapstan(string messageKey, IncomingType newMessage)
+        {
+            Messages.OnNext((messageKey, newMessage));
         }
 
         /// <summary>
         /// Inside of the broadcaster there should be some way to know
         /// which clients are connected. (Inject a dependency in your concrete implementation)
         /// </summary>
-        public abstract IEnumerable<Client<TInput, TOutput>> Clients { get; }
+        public virtual IEnumerable<Client<IncomingType, ReturnedType>> Clients => InternalClients();
     }
 }

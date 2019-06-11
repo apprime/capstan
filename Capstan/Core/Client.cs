@@ -1,6 +1,6 @@
 ﻿namespace Capstan.Core
 {
-    public interface Client<TInput, TOutput> : Sender<TInput>, Receiver<TOutput>
+    public interface Client<IncomingType, ReturnedType> : Sender<IncomingType>, Receiver<ReturnedType>
     {
     }
 }

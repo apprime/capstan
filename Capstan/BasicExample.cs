@@ -26,7 +26,7 @@ namespace Capstan
 
              New is a static method that creates a new Capstan object and returns a builder for it.
 
-             SetBroadcaster expect you to provide a broadcaster instance that inherits from Broadcaster<TOutput>.
+             SetBroadcaster expect you to provide a broadcaster instance that inherits from Broadcaster<ReturnedType>.
              It will allow your connected users to be notified when things happen.
 
              Set ErrorManager expects you to provide an object from a class that inherits from the ErrorManager.
@@ -54,77 +54,20 @@ namespace Capstan
              some information - a string in this example.
              */
 
-            var capstan = Builder<TestInput, string>
-                .New()
-                .SetBroadcaster((clients, dependencies) => new TestBroadcaster(clients))
-                .SetErrorManager((clients, dependencies) => new TestErrorManager(clients))
-                .RegisterActivist(new TestActivist())
-                .RegisterDependencies(container =>
-                {
-                    container.RegisterType<IEnterpriseBusinessDependency, EnterpriseBusinessDependency>(new TransientLifetimeManager());
-                })
-                .AddRoute("Login", (evt, deps) => new TestEvent(evt))
-                .AddRoute("Logout", (evt, deps) => new ChainOfCommandComplexEventOne(evt, deps))
-                //Obviously don't use the same names for multiple routes.
-                //The engine wont throw exceptions but additional Events are not added.
-                //Also, Synchronous events wont be allowed for final version(Don't ask me when the final version is).
                 .AddRouteAsync("LoginAsync", (evt, deps) => new ChainOfCommandComplexEventOne(evt, deps))
                 .AddRouteAsync("LogoutAsync", (evt, deps) => new TestEvent(evt))
                 .Build();
 
             capstan.Start();
 
-            var user = new TestUser();
-            capstan.Subscribe(user);
-
-            user.Send("Login", new TestInput("Demo!"));
         }
     }
 
-    public class TestInput : Message
-    {
-        public TestInput(string input)
-        {
-            Data = input;
-        }
-        public string Data;
-        public int SenderId => throw new NotImplementedException();
-    }
 
-    public class TestActivist : Activist
-    {
-        private int counter = 1;
-        public async Task Activate()
-        {
-            await Task.Factory.StartNew(() => throw new NotImplementedException());
-        }
 
-        public bool Condition()
-        {
-            //Increase one every time we check, return true every 10 times.
-            return ++counter % 10 == 0;
-        }
-    }
 
-    public class TestEvent : CapstanEvent<TestInput, string>
-    {
-        public TestEvent(TestInput something)
-        {
 
-        }
-
-        public override void Process()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override Task ProcessAsync()
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    public class TestComplexEvent : CapstanEvent<TestInput, string>
+    public class TestComplexEvent : CapstanEvent<TesIncomingType, string>
     {
         public TestComplexEvent(IEnterpriseBusinessDependency enterpriseBusinessDependency, ICapstanImplementation capstanImpmentation, string favouriteGoat)
         {
@@ -145,62 +88,13 @@ namespace Capstan
         }
     }
 
-    public class TestUser : Client<TestInput, string>
-    {
-        public TestUser()
-        {
-        }
 
-        public Subject<(string key, TestInput value)> Messages => new Subject<(string key, TestInput value)>();
 
-        public int Id => GetHashCode();
-
-        public void Receive(string output)
-        {
-            //Client takes string, parses it somehow if needed,
-            //and does whatever it wants.
-        }
-
-        public void Send(string key, TestInput input)
-        {
-            //Somewhere someone tells CapstanClient to cc.Send(stuff);
-            //This results in a message that is pushed into the grinder.
-            Messages.OnNext((key, input));
-        }
-    }
-
-    public class TestBroadcaster : Broadcaster<TestInput,string>
-    {
-        private readonly List<Client<TestInput, string>> innerDep;
-
-        public TestBroadcaster(List<Client<TestInput, string>> users)
-        {
-            innerDep = users;
-        }
-
-        public override IEnumerable<Client<TestInput, string>> Clients
-        {
-            get => innerDep;
-        }
-    }
-
-    public class TestErrorManager : ErrorManager<string>
-    {
-        public TestErrorManager(Dictionary<int, Receiver<string>> clients) { Clients = clients; }
-
-        protected override Dictionary<int, Receiver<string>> Clients { get; set; }
-
-        public override string ParseError(Exception ex)
-        {
-            return ex.Message;
-        }
-    }
-
-    public class ChainOfCommandComplexEventOne : CapstanEvent<TestInput, string>
+    public class ChainOfCommandComplexEventOne : CapstanEvent<TesIncomingType, string>
     {
         private ChainOfCommandComplexEventTwo _testComplexEvent;
 
-        public ChainOfCommandComplexEventOne(TestInput input, IUnityContainer container)
+        public ChainOfCommandComplexEventOne(TesIncomingType input, IUnityContainer container)
         {
             var ebd = container.Resolve<IEnterpriseBusinessDependency>();
             _testComplexEvent = new ChainOfCommandComplexEventTwo(input, ebd);
@@ -217,11 +111,11 @@ namespace Capstan
         }
     }
 
-    public class ChainOfCommandComplexEventTwo : CapstanEvent<TestInput, string>
+    public class ChainOfCommandComplexEventTwo : CapstanEvent<TesIncomingType, string>
     {
         private TestComplexEvent _testComplexEvent;
 
-        public ChainOfCommandComplexEventTwo(TestInput input, IEnterpriseBusinessDependency ebd)
+        public ChainOfCommandComplexEventTwo(TesIncomingType input, IEnterpriseBusinessDependency ebd)
         {
             var cid = CapstanImplementationFactory.Manufacture(input);
             var goat = GoatFactory.GetGoat(TestComplexEvent.FavouriteGoatId);
@@ -240,24 +134,7 @@ namespace Capstan
         }
     }
 
-    public interface IEnterpriseBusinessDependency
-    {
-        void GenerateXml(string text);
-        byte[] ToExcel(object xmlDocument);
-    }
-
-    public class EnterpriseBusinessDependency : IEnterpriseBusinessDependency
-    {
-        public void GenerateXml(string text)
-        {
-            throw new NotImplementedException();
-        }
-
-        public byte[] ToExcel(object xmlDocument)
-        {
-            throw new NotImplementedException();
-        }
-    }
+  
 
     public static class GoatFactory
     {
@@ -274,7 +151,7 @@ namespace Capstan
 
     public static class CapstanImplementationFactory
     {
-        public static ICapstanImplementation Manufacture(TestInput input)
+        public static ICapstanImplementation Manufacture(TesIncomingType input)
         {
             if (input.SenderId == 123)
             {

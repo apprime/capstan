@@ -14,9 +14,9 @@ namespace Capstan
     /// can be overridden to include for example a logger service, or 
     /// a logger client that also Receive()'s the error.
     /// </summary>
-    public abstract class ErrorManager<TOutput>
+    public abstract class ErrorManager<ReturnedType>
     {
-        public abstract TOutput ParseError(Exception ex);
+        internal Func<Dictionary<int, Receiver<ReturnedType>>> InternalSenders { private get; set; }
 
         public virtual void ReturnToSender(int senderId, Exception ex)
         {
@@ -24,14 +24,10 @@ namespace Capstan
             {
                 Clients[senderId].Receive(ParseError(ex));
             }
-            else
-            {
-                //TODO: Log error when no sender was found.
-            }
-
         }
+        public abstract ReturnedType ParseError(Exception ex);
 
-        protected abstract Dictionary<int, Receiver<TOutput>> Clients { get; set; }
+        protected virtual Dictionary<int, Receiver<ReturnedType>> Clients => InternalSenders();
 
         /// <summary>
         /// This is a standard error that should be returned when a route cannot be found.

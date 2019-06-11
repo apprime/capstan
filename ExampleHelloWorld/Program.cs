@@ -18,20 +18,20 @@ namespace ExampleHelloWorld
             .AddRoute("Hello", (input, dependencies) => new HelloWorldEvent(input.OurValue))
 
             //3. The broadcaster is an object that Capstan uses to send messages back to clients.
-            //   you need to inherit from a base class here to get needed functionality.
+            //   you can inherit from a base class here to get needed functionality.
             //   The broadcaster is accessible from inside all of your events.
-            .SetBroadcaster((clients, dependencies) => new HelloWorldBroadcaster(clients))
+            .SetBroadcaster(dependencies => new Broadcaster<HelloWorldInput, string>())
 
             //4. The errormanager is an object that handles exceptions. Since we have no return values
             //   for any of our Events, we must return errors to the Sender with this instead.
-            .SetErrorManager((clients, dependencies) => new HelloWorldErrorManager(clients))
+            .SetErrorManager(dependencies => new HelloWorldErrorManager())
 
             //5. Build helps check that you did all of the above steps as a minimum and some other things before we start.
             .Build();
 
 
             //6. We create a client. This could be an object that keeps a websockets connection inside of it, or a service API endpoint
-            //   Importantly, it has to persist because we need to subscribe it to capstan in order to send and receive messages.
+            //   Importantly, it has to persist because capstan may try to send a message to it at any time.
             var ourClient = new HelloWorldClient<string, string>(123);
             capstan.Subscribe(ourClient);
 

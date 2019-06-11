@@ -6,12 +6,12 @@ namespace ExampleHelloWorld
 {
     public class HelloWorldErrorManager : Capstan.ErrorManager<string>
     {
-        public HelloWorldErrorManager(Dictionary<int, Receiver<string>> clients)
-        {
-            Clients = clients; 
-        }
+        private readonly Dictionary<int, Receiver<string>> clients;
 
-        protected override Dictionary<int, Receiver<string>> Clients { get; set; }
+        protected override Dictionary<int, Receiver<string>> GetClients()
+        {
+            return clients;
+        }
 
         public override string ParseError(Exception ex)
         {

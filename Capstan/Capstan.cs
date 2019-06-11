@@ -10,13 +10,13 @@ using Unity;
 
 namespace Capstan
 {
-    public class Capstan<TInput, TOutput> where TInput : Message
+    public class Capstan<IncomingType, ReturnedType> where IncomingType : Message
     {
         private const int TickRate = 1000;
         private bool _started;
-        private ErrorManager<TOutput> _errorManager;
-        private Broadcaster<TInput, TOutput> _broadcaster;
-        private List<(Client<TInput, TOutput> client, IDisposable subscription)> _clients;
+        private ErrorManager<ReturnedType> _errorManager;
+        private Broadcaster<IncomingType, ReturnedType> _broadcaster;
+        private List<(Client<IncomingType, ReturnedType> client, IDisposable subscription)> _clients;
         private readonly Timer _timer;
         private readonly IUnityContainer _dependencyContainer;
 
@@ -28,53 +28,65 @@ namespace Capstan
         internal Capstan()
         {
             _started = false;
-            _clients = new List<(Client<TInput, TOutput> client, IDisposable subscription)>();
+            _clients = new List<(Client<IncomingType, ReturnedType> client, IDisposable subscription)>();
             _broadcaster = null;
             _errorManager = null;
             _timer = new Timer(CapstanCycleEvent.OnTimerEvent, null, TickRate, TickRate);
             _dependencyContainer = new UnityContainer();
-            RoutesAsync = new Dictionary<string, Func<TInput, IUnityContainer, CapstanEvent<TInput, TOutput>>>();
-            Routes = new Dictionary<string, Func<TInput, IUnityContainer, CapstanEvent<TInput, TOutput>>>();
+            RoutesAsync = new Dictionary<string, Func<IncomingType, IUnityContainer, CapstanEvent<IncomingType, ReturnedType>>>();
+            Routes = new Dictionary<string, Func<IncomingType, IUnityContainer, CapstanEvent<IncomingType, ReturnedType>>>();
         }
 
         public IUnityContainer Dependencies { get; internal set; }
-        public Broadcaster<TInput, TOutput> Broadcaster
+        public Broadcaster<IncomingType, ReturnedType> Broadcaster
         {
             get
             {
                 if (_broadcaster == null)
                 {
-                    _broadcaster = BroadcasterFactory(ConvertClientsToReceivers(), Dependencies);
+                    _broadcaster = BroadcasterFactory(Dependencies);
+                    _broadcaster.InternalClients = ConvertClientsToReceivers;
+                    _broadcaster.Messages.Subscribe(async (i) => await Push(i));
                 }
                 return _broadcaster;
             }
         }
 
-        public ErrorManager<TOutput> ErrorManager
+        public ErrorManager<ReturnedType> ErrorManager
         {
             get
             {
                 if (_errorManager == null)
                 {
-                    _errorManager = ErrorManagerFactory(ConvertClientsToDictionaryOfReceivers(), Dependencies);
+                    _errorManager = ErrorManagerFactory(Dependencies);
+                    _errorManager.InternalSenders = ConvertClientsToDictionaryOfReceivers;
                 }
                 return _errorManager;
             }
         }
 
-        public void Subscribe(Client<TInput, TOutput> client)
+        public void Subscribe(Client<IncomingType, ReturnedType> client)
         {
-            var subscription = client.Messages.Subscribe(async (i) =>
+            if (_clients.Any(i => i.client.Id == client.Id))
             {
-                await Push(i);
-            });
+                //User already subscribed
+                return;
+            }
+
+            var subscription = client.Messages.Subscribe(async (i) => await Push(i));
             _clients.Add((client, subscription));
         }
-        public void Unsubscribe(Client<TInput, TOutput> client)
+        public void Unsubscribe(Client<IncomingType, ReturnedType> client)
         {
             var currentClient = _clients
                 .Where(i => i.client == client)
-                .Single();
+                .SingleOrDefault();
+
+            if (currentClient.client == null)
+            {
+                //No such user subscribed
+                return;
+            }
 
             currentClient.subscription.Dispose();
             _clients.Remove(currentClient);
@@ -82,22 +94,28 @@ namespace Capstan
         public void Start()
         {
             _started = true;
+
+            foreach (var activistFactory in ActivistFactories)
+            {
+                var activist = activistFactory(Dependencies);
+                activist.Broadcaster = Broadcaster;
+            }
+
+            CapstanCycleEvent.Cycling = true;
         }
         public void Stop()
         {
             _started = false;
+            CapstanCycleEvent.Cycling = false;
         }
 
-        internal void SetErrorManager(ErrorManager<TOutput> errorManager)
-        {
-            _errorManager = errorManager;
-        }
-        internal Dictionary<string, Func<TInput, IUnityContainer, CapstanEvent<TInput, TOutput>>> Routes { get; }
-        internal Dictionary<string, Func<TInput, IUnityContainer, CapstanEvent<TInput, TOutput>>> RoutesAsync { get; }
-        internal Func<List<Client<TInput, TOutput>>, IUnityContainer, Broadcaster<TInput, TOutput>> BroadcasterFactory { get; set; }
-        internal Func<Dictionary<int, Receiver<TOutput>>, IUnityContainer, ErrorManager<TOutput>> ErrorManagerFactory { get; set; }
+        internal Dictionary<string, Func<IncomingType, IUnityContainer, CapstanEvent<IncomingType, ReturnedType>>> Routes { get; }
+        internal Dictionary<string, Func<IncomingType, IUnityContainer, CapstanEvent<IncomingType, ReturnedType>>> RoutesAsync { get; }
+        internal List<Func<IUnityContainer, Activist<IncomingType, ReturnedType>>> ActivistFactories { get; set; }
+        internal Func<IUnityContainer, Broadcaster<IncomingType, ReturnedType>> BroadcasterFactory { get; set; }
+        internal Func<IUnityContainer, ErrorManager<ReturnedType>> ErrorManagerFactory { get; set; }
 
-        private async Task Push((string key, TInput value) @event)
+        private async Task Push((string key, IncomingType value) @event)
         {
             if (!_started) { return; }
 
@@ -135,18 +153,18 @@ namespace Capstan
             }
         }
 
-        private List<Client<TInput, TOutput>> ConvertClientsToReceivers()
+        internal List<Client<IncomingType, ReturnedType>> ConvertClientsToReceivers()
         {
             return _clients
                 .Select(i => i.client)
                 .ToList();
         }
 
-        private Dictionary<int, Receiver<TOutput>> ConvertClientsToDictionaryOfReceivers()
+        private Dictionary<int, Receiver<ReturnedType>> ConvertClientsToDictionaryOfReceivers()
         {
             return _clients
                 .Select(i => i.client)
-                .ToDictionary(i => i.Id, i => (Receiver<TOutput>)i);
+                .ToDictionary(i => i.Id, i => (Receiver<ReturnedType>)i);
         }
     }
 }
