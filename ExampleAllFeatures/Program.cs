@@ -22,14 +22,11 @@ namespace ExampleAllFeatures
             //5. Register Event with single dependency
             //6. Register Event with complicated dependency
 
-            
-
-
             while (running)
             {
+                Console.WriteLine("Capstan is ready, but not started.");
                 ReadInput();
             }
-
         }
 
         private static void Setup()
@@ -70,14 +67,15 @@ namespace ExampleAllFeatures
                 {
                     if (parts[1] == "clients") { ListClients(); }
                     else if (parts[1] == "messages") { ListMessages(); }
+                    else if (parts[1] == "commands") { ListCommands(); }
                     else
                     {
-                        Console.WriteLine("Use either 'list clients' or 'list messages'");
+                        Console.WriteLine("Use either 'list clients', 'list commands' or 'list messages'");
                     }
                 }
                 else
                 {
-                    Console.WriteLine("Use either 'list clients' or 'list messages'");
+                    Console.WriteLine("Use either 'list clients', 'list commands' or 'list messages'");
                 }
 
             }
@@ -168,6 +166,19 @@ namespace ExampleAllFeatures
             }
             //Parse input for 'send "key" "message" "name"'
 
+        }
+
+        private static void ListCommands()
+        {
+            Console.WriteLine("Available Commands:");
+            Console.WriteLine("Add [name] - Add a client to program");
+            Console.WriteLine("Remove [name] - Remove a client from program");
+            Console.WriteLine("Subscribe [name] - Push a client into capstan");
+            Console.WriteLine("Unsubscribe [name] - Remove a client from capstan");
+            Console.WriteLine("Send [message name] - Start the process of sending a message");
+            Console.WriteLine("Start - Tell capstan to begin listening for commands");
+            Console.WriteLine("Stop - Tell capstan to stop listening for commands");
+            Console.WriteLine("Exit - terminate the program");
         }
 
         private static void AddClient(string clientName)
