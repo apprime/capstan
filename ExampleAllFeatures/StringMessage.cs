@@ -12,6 +12,6 @@ namespace ExampleAllFeatures
         public int SenderId { get; set; }
         public string MessageBody { get; set; }
         public string SenderName { get; set; }
-        public ClientType SenderType { get; set; }
+        //public ClientType SenderType { get; set; }
     }
 }

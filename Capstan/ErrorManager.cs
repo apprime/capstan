@@ -27,7 +27,7 @@ namespace Capstan
         }
         public abstract ReturnedType ParseError(Exception ex);
 
-        protected virtual Dictionary<int, Receiver<ReturnedType>> Clients => InternalSenders();
+        protected Dictionary<int, Receiver<ReturnedType>> Clients => InternalSenders();
 
         /// <summary>
         /// This is a standard error that should be returned when a route cannot be found.

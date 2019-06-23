@@ -26,6 +26,7 @@ namespace ExampleAllFeatures
         public void Send(string key, StringMessage input)
         {
             input.SenderId = Id;
+            input.SenderName = Name;
             Messages.OnNext((key, input));
         }
     }

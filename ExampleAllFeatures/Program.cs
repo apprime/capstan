@@ -9,7 +9,7 @@ namespace ExampleAllFeatures
 {
     internal partial class Program
     {
-        private static bool running = false;
+        private static bool running = true;
         private static Capstan<StringMessage, string> capstan = null;
         private static List<GenericClient> clients = new List<GenericClient>();
         private static int clientCount = 0;
@@ -57,7 +57,7 @@ namespace ExampleAllFeatures
 
         private static void ReadInput()
         {
-            var input = Console.ReadLine().ToLower();
+            var input = Console.ReadLine();
 
             if (input == "exit") { running = false; }
             if (input == "start") { capstan.Start(); }
@@ -213,7 +213,6 @@ namespace ExampleAllFeatures
 
         private static void SendMessage(string key, string body, GenericClient client)
         {
-            Console.WriteLine($"Sending {key}: {body}");
             client.Send(key, new StringMessage(body));
         }
     }

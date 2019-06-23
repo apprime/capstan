@@ -6,7 +6,7 @@ using Unity;
 
 namespace Capstan
 {
-    public class Builder<IncomingType,ReturnedType> where IncomingType : Message 
+    public class Builder<IncomingType, ReturnedType> where IncomingType : Message
     {
         private Capstan<IncomingType, ReturnedType> _instance;
         private IUnityContainer _dependencyContainer;
@@ -19,7 +19,7 @@ namespace Capstan
             return builder;
         }
 
-        public IUnityContainer Dependencies { get; }
+        public IUnityContainer Dependencies { get { return _dependencyContainer; } }
         public Builder<IncomingType, ReturnedType> RegisterDependencies(Action<IUnityContainer> action)
         {
             action(Dependencies);
@@ -31,7 +31,7 @@ namespace Capstan
             _instance.BroadcasterFactory = factory;
             return this;
         }
-        
+
         public Builder<IncomingType, ReturnedType> SetErrorManager(Func<IUnityContainer, ErrorManager<ReturnedType>> factory)
         {
             _instance.ErrorManagerFactory = factory;
@@ -69,7 +69,7 @@ namespace Capstan
                 throw new Exception("ErrorManager has not been provided a factory method and cannot be created.");
             }
 
-            if(_instance.Routes.Count == 0 && _instance.RoutesAsync.Count == 0)
+            if (_instance.Routes.Count == 0 && _instance.RoutesAsync.Count == 0)
             {
                 throw new Exception("This capstan instance cannot be built because it has no routes assigned");
             }

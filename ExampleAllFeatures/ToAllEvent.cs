@@ -14,7 +14,9 @@ namespace ExampleAllFeatures
 
         public override void Process()
         {
-            this.Broadcaster.Broadcast("Good news everyone. We were supposed to make a delivery to the planet Tweenis 12 but it's been completely destroyed.");
+            this.Broadcaster
+                .Filter(i => i.Id != Clients.Logger)
+                .Broadcast("Good news everyone. We were supposed to make a delivery to the planet Tweenis 12 but it's been completely destroyed.");
         }
 
         public async override Task ProcessAsync()

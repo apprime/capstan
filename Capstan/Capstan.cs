@@ -31,7 +31,7 @@ namespace Capstan
             _clients = new List<(Client<IncomingType, ReturnedType> client, IDisposable subscription)>();
             _broadcaster = null;
             _errorManager = null;
-            _timer = new Timer(CapstanCycleEvent.OnTimerEvent, null, TickRate, TickRate);
+            _timer = new Timer(CapstanCycleEvent<IncomingType, ReturnedType>.OnTimerEvent, null, TickRate, TickRate);
             _dependencyContainer = new UnityContainer();
             RoutesAsync = new Dictionary<string, Func<IncomingType, IUnityContainer, CapstanEvent<IncomingType, ReturnedType>>>();
             Routes = new Dictionary<string, Func<IncomingType, IUnityContainer, CapstanEvent<IncomingType, ReturnedType>>>();
@@ -101,12 +101,12 @@ namespace Capstan
                 activist.Broadcaster = Broadcaster;
             }
 
-            CapstanCycleEvent.Cycling = true;
+            CapstanCycleEvent<IncomingType, ReturnedType>.Cycling = true;
         }
         public void Stop()
         {
             _started = false;
-            CapstanCycleEvent.Cycling = false;
+            CapstanCycleEvent<IncomingType, ReturnedType>.Cycling = false;
         }
 
         internal Dictionary<string, Func<IncomingType, IUnityContainer, CapstanEvent<IncomingType, ReturnedType>>> Routes { get; }

@@ -9,12 +9,12 @@ namespace Capstan.Events
     /// It cycles through all Activists to see if any should
     /// be activated.
     /// </summary>
-    internal static class CapstanCycleEvent
+    internal static class CapstanCycleEvent<IncomingType, ReturnedType> where IncomingType : Message
     {
-        private static List<Activist> activists = new List<Activist>();
+        private static List<Activist<IncomingType, ReturnedType>> activists = new List<Activist<IncomingType, ReturnedType>>();
         internal static bool Cycling = false;
 
-        internal static void RegisterActivist(Activist activist)
+        internal static void RegisterActivist(Activist<IncomingType, ReturnedType> activist)
         {
             activists.Add(activist);
         }

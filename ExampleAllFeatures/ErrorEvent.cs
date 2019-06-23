@@ -14,12 +14,12 @@ namespace ExampleAllFeatures
 
         public override void Process()
         {
-            throw new System.Exception($"Dear {input.SenderName}. This ErrorEvent threw and error and successfully failed!");
+            throw new System.Exception($"Dear {input.SenderName}. This ErrorEvent threw an error and successfully failed!");
         }
 
         public async override Task ProcessAsync()
         {
-            throw new System.Exception("This ErrorEvent threw and error and successfully failed!");
+            throw new System.Exception("This ErrorEvent threw an error and successfully failed!");
         }
     }
 }
