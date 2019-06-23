@@ -9,7 +9,7 @@ namespace Capstan.Core
     /// </summary>
     public abstract class Activist<IncomingType, ReturnedType> where IncomingType : Message
     {
-        internal Broadcaster<IncomingType, ReturnedType>  Broadcaster { set; private get; }
+        public Broadcaster<IncomingType, ReturnedType>  Broadcaster { set; protected get; }
         public abstract bool Condition();
         public abstract Task Activate();
     }

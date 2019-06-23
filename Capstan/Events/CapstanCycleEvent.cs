@@ -23,6 +23,14 @@ namespace Capstan.Events
         {
             if (!Cycling) { return; }
 
+            //foreach(var a in activists)
+            //{
+            //    if(a.Condition())
+            //    {
+            //        a.Activate();
+            //    }
+            //}
+
             Task.Factory.StartNew
             (
                 () => Parallel.ForEach(activists.Where(i => i.Condition()), i => i.Activate())

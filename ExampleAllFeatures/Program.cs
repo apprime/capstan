@@ -17,14 +17,13 @@ namespace ExampleAllFeatures
         private static void Main(string[] args)
         {
             Setup();
-            //2. Register Second Client for logging only.
-            //4. Register Event with no dependencies
-            //5. Register Event with single dependency
-            //6. Register Event with complicated dependency
+            //Register Event with no dependencies
+            //Register Event with single dependency
+            //Register Event with complicated dependency
 
+            Console.WriteLine("Capstan is ready, but not started. For help, type 'list commands'");
             while (running)
             {
-                Console.WriteLine("Capstan is ready, but not started.");
                 ReadInput();
             }
         }
@@ -164,8 +163,12 @@ namespace ExampleAllFeatures
                     }
                 }
             }
-            //Parse input for 'send "key" "message" "name"'
+        }
 
+        private static void AddClient(string clientName)
+        {
+            clientCount++;
+            clients.Add(new GenericClient(clientCount, clientName));
         }
 
         private static void ListCommands()
@@ -179,12 +182,9 @@ namespace ExampleAllFeatures
             Console.WriteLine("Start - Tell capstan to begin listening for commands");
             Console.WriteLine("Stop - Tell capstan to stop listening for commands");
             Console.WriteLine("Exit - terminate the program");
-        }
-
-        private static void AddClient(string clientName)
-        {
-            clientCount++;
-            clients.Add(new GenericClient(clientCount, clientName));
+            Console.WriteLine("List Commands - List all commands");
+            Console.WriteLine("List Clients - List all Clients");
+            Console.WriteLine("List Messages - List all message types");
         }
 
         private static void ListClients()

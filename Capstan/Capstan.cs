@@ -99,6 +99,7 @@ namespace Capstan
             {
                 var activist = activistFactory(Dependencies);
                 activist.Broadcaster = Broadcaster;
+                CapstanCycleEvent<IncomingType, ReturnedType>.RegisterActivist(activist);
             }
 
             CapstanCycleEvent<IncomingType, ReturnedType>.Cycling = true;

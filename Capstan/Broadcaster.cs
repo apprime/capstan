@@ -32,6 +32,7 @@ namespace Capstan
         public Broadcaster()
         {
             Messages = new Subject<(string key, IncomingType payload)>();
+            InternalClients = () => new List<Client<IncomingType, ReturnedType>>();
         }
 
         /// <summary>
