@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Capstan.Events;
 
@@ -7,10 +8,13 @@ namespace ExampleAllFeatures
     internal class ChattyEvent : CapstanEvent<StringMessage, string>
     {
         private StringMessage input;
+        private IEnterpriseBusinessDependency enterpriseDependency;
 
-        public ChattyEvent(StringMessage input)
+        public ChattyEvent(StringMessage input, IEnterpriseBusinessDependency enterpriseBusinessDependency)
         {
             this.input = input;
+            //This will throw an exception unless we get a proper object.
+            this.enterpriseDependency = enterpriseBusinessDependency ?? throw new Exception("Could not resolve the dependency");
         }
 
         public async override void Process()

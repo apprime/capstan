@@ -1,11 +1,8 @@
 ﻿namespace ExampleAllFeatures
 {
-    partial class Program
+    public interface IEnterpriseBusinessDependency
     {
-        public interface IEnterpriseBusinessDependency
-        {
-            void GenerateXml(string text);
-            byte[] ToExcel(object xmlDocument);
-        }
+        void GenerateXml(string text);
+        byte[] ToExcel(object xmlDocument);
     }
 }

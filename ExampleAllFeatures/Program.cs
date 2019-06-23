@@ -7,39 +7,29 @@ using Unity.Lifetime;
 
 namespace ExampleAllFeatures
 {
-    partial class Program
+    internal partial class Program
     {
         private static bool running = false;
         private static Capstan<StringMessage, string> capstan = null;
         private static List<GenericClient> clients = new List<GenericClient>();
         private static int clientCount = 0;
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             Setup();
-            //1. Register Clients with a name and id
             //2. Register Second Client for logging only.
             //4. Register Event with no dependencies
             //5. Register Event with single dependency
             //6. Register Event with complicated dependency
 
-            //9. Register Activist that pokes random person on a timer
+            
 
-            //1. Send Message that throws error
-            //2. Send Message that returns to sender
-            //3. Send Message that returns to all
-            //4. Send Message with no returns
-            //5. Send Message with several returns to sender
 
-            //1. Receive a Message from Activist
-            //2. Unsubscribe to get away from Activist
-            //3. Stop Capstan, resubscribe and see that Activist is no longer working.
-
-            while(running)
+            while (running)
             {
                 ReadInput();
             }
-            
+
         }
 
         private static void Setup()
@@ -51,13 +41,13 @@ namespace ExampleAllFeatures
                 .AddRoute("TellAll", (input, dependencies) => new ToAllEvent(input))
                 .AddRoute("TellOthers", (input, dependencies) => new TellOthersEvent(input))
                 .AddRoute("Void", (input, dependencies) => new VoidEvent(input))
-                .AddRoute("TellMeMuch", (input, dependencies) => new ChattyEvent(input))
+                .AddRoute("TellMeMuch", (input, dependencies) => new ChattyEventFactory().Create(input, dependencies)) //Create an instance of the factory, or use static method Create.
                 .RegisterDependencies(container =>
                 {
                     //Remember: using Unity;
                     container.RegisterType<IEnterpriseBusinessDependency, EnterpriseBusinessDependency>(new TransientLifetimeManager());
                 })
-                .RegisterActivist((dependencies) => new PeoplePoker<StringMessage, string>())
+                .RegisterActivist((dependencies) => new PeoplePoker<StringMessage, string>()) //Register Activist that pokes random person on a timer
                 .SetBroadcaster(dependencies => new Broadcaster<StringMessage, string>())
                 .SetErrorManager(dependencies => new FeaturedErrorManager())
                 .Build();
@@ -67,18 +57,115 @@ namespace ExampleAllFeatures
 
         private static void ReadInput()
         {
-            var input = Console.ReadLine();
+            var input = Console.ReadLine().ToLower();
 
-            if(input == "exit") { running = false; }
-            if(input == "start") { capstan.Start(); }
-            if(input == "stop") { capstan.Stop(); }
+            if (input == "exit") { running = false; }
+            if (input == "start") { capstan.Start(); }
+            if (input == "stop") { capstan.Stop(); }
 
-            //Parse input for 'add "name"'
-            //string clientName;
-            //AddClient(clientName);
-            //Parse input for 'subscribe "name"'
-            //Parse input for 'unsubscribe "name"'
-            //Parse input for 'list clients'
+            if (input.StartsWith("list"))
+            {
+                var parts = input.Split(' ');
+                if (parts.Length == 2)
+                {
+                    if (parts[1] == "clients") { ListClients(); }
+                    else if (parts[1] == "messages") { ListMessages(); }
+                    else
+                    {
+                        Console.WriteLine("Use either 'list clients' or 'list messages'");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Use either 'list clients' or 'list messages'");
+                }
+
+            }
+
+            if (input.StartsWith("add"))
+            {
+                var parts = input.Split(' ');
+                if (parts.Length != 2)
+                {
+                    Console.WriteLine("Add Clients using only the keyword 'add' and a name, separated by space");
+                }
+                else
+                {
+                    AddClient(parts[1]);
+                    Console.WriteLine($"Added Client {parts[1]}");
+                }
+            }
+
+            if (input.StartsWith("subscribe"))
+            {
+                var parts = input.Split(' ');
+                if (parts.Length != 2)
+                {
+                    Console.WriteLine("Subscribe Clients using only the keyword 'subscribe' and a name, separated by space");
+                }
+                else
+                {
+                    if (clients.Any(i => i.Name == parts[1]))
+                    {
+                        SubscribeClient(parts[1]);
+                        Console.WriteLine($"Subscribed Client {parts[1]}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Cannot find a client named {parts[1]}, did you add it?");
+                    }
+                }
+            }
+
+            if (input.StartsWith("unsubscribe"))
+            {
+                var parts = input.Split(' ');
+                if (parts.Length != 2)
+                {
+                    Console.WriteLine("Unsubscribe Clients using only the keyword 'unsubscribe' and a name, separated by space");
+                }
+                else
+                {
+                    if (clients.Any(i => i.Name == parts[1]))
+                    {
+                        UnsubscribeClient(parts[1]);
+                        Console.WriteLine($"Unsubscribe Client {parts[1]}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Cannot find a client named {parts[1]}, did you add it?");
+                    }
+                }
+            }
+
+            if (input.StartsWith("send"))
+            {
+                var parts = input.Split(' ');
+                if (parts.Length != 2)
+                {
+                    Console.WriteLine("Send messages with this syntax: 'send [key]' ie 'send tellall'");
+                }
+                else
+                {
+                    var key = parts[1];
+                    Console.WriteLine("Which client is this?");
+                    var clientStr = Console.ReadLine();
+                    var client = clients.SingleOrDefault(i => i.Name == clientStr);
+                    if (client != null)
+                    {
+                        Console.WriteLine("What is your message?");
+                        var body = Console.ReadLine();
+
+                        SendMessage(key, body, client);
+
+                        Console.WriteLine($"Sending a {key} message from {clientStr} with the contents '{body}'.");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Cannot find a client named {parts[1]}, did you add it?");
+                    }
+                }
+            }
             //Parse input for 'send "key" "message" "name"'
 
         }
@@ -95,10 +182,21 @@ namespace ExampleAllFeatures
             Console.WriteLine(string.Join(",", clients.Select(i => i.Name)));
         }
 
+        private static void ListMessages()
+        {
+            Console.WriteLine("Available Messages:");
+            Console.WriteLine("[Error] - Message that throws error");
+            Console.WriteLine("[ReturnToMe] - Message that returns to sender");
+            Console.WriteLine("[TellAll] - Message that returns to all");
+            Console.WriteLine("[TellOthers] - Message that returns to all except me");
+            Console.WriteLine("[Void] - Message with no returns");
+            Console.WriteLine("[TellMeMuch] - Message with multiple returns");
+        }
+
         private static void SubscribeClient(string clientName)
         {
             var c = clients.Single(i => i.Name == clientName);
-            if(c != null)
+            if (c != null)
             {
                 capstan.Subscribe(c);
             }
